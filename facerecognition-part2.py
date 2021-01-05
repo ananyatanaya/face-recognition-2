@@ -18,9 +18,20 @@ models = {
         "data_path": "face/komal/",
         "files": [],
         "model": None
+    },    
+    "Arunima": {
+        "data_path": "face/Arunima/",
+        "files": [],
+        "model": None
+    },    
+    "Ibrahim": {
+        "data_path": "face/Ibrahim/",
+        "files": [],
+        "model": None
     }
 }
 for key in models:
+    print("Started training model for " + key)
     models[key]["files"] = [f for f in listdir(models[key]["data_path"]) if isfile(join(models[key]["data_path"], f))]
     Training_Data, Labels = [], []
 
@@ -38,7 +49,6 @@ for key in models:
     # NOTE: For OpenCV 3.0 use cv2.face.createLBPHFaceRecognizer()
 
     #Training_Data), np.asarray(Labels))
-    print("Started training model for " + key)
 
     # Let's train our model
     models[key]["model"].train(np.asarray( Training_Data), np.asarray(Labels))
@@ -56,26 +66,34 @@ def face_detector(img, size=0.5):
     faces = face_classifier.detectMultiScale( gray, 1.3, 5)
     # If face not found return blank region
     if faces is ():
-        return img, []
+        return [img, [], None]
     # Obtain Region of face
     for (x,y,w,h) in faces:
         cv2.rectangle(img, (x,y), (x+w,y+h), (0,255,255),2)
         roi = img[y:y+h, x:x+w]
         roi = cv2.resize(roi, (200, 200))
-    return img, roi
+    
+    return [img, roi, faces[0]]
 
 
 # Open Webcam
 cap = cv2.VideoCapture(0)
 while True:
     ret, frame = cap.read()
-    image, face = face_detector(frame)
+    ar = face_detector(frame)
+    image = ar[0] 
+    face=ar[1] 
+    pos=ar[2]
+
+
     time.sleep(0.06)
+    
     try:
         face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
         # print(face)
         foundFace = False
         user = None
+        confidence = 0
         for key in models:
             if foundFace == True:
                 break
@@ -87,16 +105,23 @@ while True:
                     foundFace = True
                 # display_string = str(confidence) + '% Confident it is User'
         
+        posX = pos[0] +10
+        posY = pos[0] - 10
+        cv2.putText(image, "Accuracy " + str(confidence) + "%", (10, 50), cv2.FONT_HERSHEY_COMPLEX, 1, (255,120,150), 2)
         if foundFace == True:
-            cv2.putText(image, user, (100, 120), cv2.FONT_HERSHEY_COMPLEX, 1, (255,120,150), 2)
+            cv2.putText(image, user, (posX, posY), cv2.FONT_HERSHEY_COMPLEX, 1, (255,120,150), 2)
         else:
-            cv2.putText(image, "Could not find user", (100, 120), cv2.FONT_HERSHEY_COMPLEX, 1, (255,120,150), 2)
+            cv2.putText(image, "Unknown ", (posX, posY), cv2.FONT_HERSHEY_COMPLEX, 1, (255,120,150), 2)
+        
+        
         cv2.imshow('Face Recognition', image )
     # Raise exception in case, no image is found
-    except:
+    except Exception as e:
         # cv2.putText(image, "No Face Found", (220, 120) , cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,255), 2)
         # cv2.putText(image, "Locked", (250, 450), cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,255), 2)
+        cv2.putText(image, "Accuracy 0%", (10, 50), cv2.FONT_HERSHEY_COMPLEX, 1, (255,120,150), 2)
         cv2.imshow('Face Recognition', image )
+        
         pass
     # Breaks loop when enter is pressed
     if cv2.waitKey(1) == 13: #13 is the Enter Key
